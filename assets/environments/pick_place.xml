@@ -1,0 +1,48 @@
+
+<mujoco model="pick and place">
+  <include file="../franka/mujoco/franka.xml"/>
+  <statistic center="0 0 .75" extent="1.2" meansize="0.05"/>
+  <option integrator="implicitfast"/>
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="-120" elevation="-20"/>
+  </visual>
+
+  <default>
+    <default class="/">
+      <default class="__VISUAL__">
+        <geom contype="0" conaffinity="0" group="0"/>
+      </default>
+      <default class="__STRUCTURAL__">
+        <geom contype="8" conaffinity="15" group="4" friction="0.90000000000000002 0.90000000000000002 0.001" solref="0.025000000000000001 1" solimp="0.998 0.998 0.001"/>
+      </default>
+      <default class="__DYNAMIC__">
+        <geom contype="1" conaffinity="15" group="4" friction="0.90000000000000002 0.90000000000000002 0.001" solref="0.025000000000000001 1" solimp="0.998 0.998 0.001"/>
+      </default>
+      <default class="__ARTICULATED__">
+        <joint armature="0.1" damping="1" axis="0 0 1" range="-2.8973 2.8973"/>
+        <general dyntype="none" biastype="affine" ctrlrange="-2.8973 2.8973" forcerange="-87 87"/>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="floor" rgba=".1 .1 .1 1" reflectance="0.1"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="none" rgb1="1 1 1" rgb2="0.97 0.97 0.97" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" rgba="0.7 0.7 0.7 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+
+    <geom name="floor_visual" size="0 0 0.05" type="plane" material="groundplane" class="__VISUAL__"/>
+    <geom name="floor_collision" size="0 0 0.05" type="plane" material="floor" class="__STRUCTURAL__" friction="1 0.005 0.0001"/>
+
+    <body name="object1" pos=".6 -0.02 .34">
+      <freejoint/>
+      <geom type="box" size=".02 .03 .04" mass=".5" rgba=".2 .2 .5 1" contype="1" conaffinity="15" group="2" friction="0.90000000000000002 0.90000000000000002 0.001" solref="0.025000000000000001 1" solimp="0.998 0.998 0.001"/>
+    </body>
+  </worldbody>
+
+</mujoco>
