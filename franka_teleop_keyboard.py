@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import time
 import threading
 
@@ -8,28 +6,18 @@ from mujoco.viewer import launch_passive
 
 from teleop.robot import FrankaTeleop
 from teleop.keyboard_input import KeyboardHandler
-try:
-    from teleop.keyboard_input_xorg import KeyboardHandlerXorg
-except Exception:
-    KeyboardHandlerXorg = None  # type: ignore
+from teleop.keyboard_input_xorg import KeyboardHandlerXorg
 
 
 def print_controls() -> None:
-    print("\n" + "=" * 60)
-    print("FRANKA TELEOPERATION CONTROLS - CONTINUOUS MOVEMENT")
-    print("=" * 60)
-    print("Movement (hold for continuous movement):")
     print("  Arrow Up/Down - Move Along X axis")
     print("  Arrow Left/Right - Move Along Y axis")
     print("  PageUp/PageDown - Move Up/Down (Z axis)")
-    print("\nGripper:")
     print("  [ - Open Gripper (incremental)")
     print("  ] - Close Gripper (incremental)")
-    print("\nUtility:")
     print("  Home - Reset to Home Position")
     print("  End - Move to Cube Position")
     print("  ESC - Exit")
-    print("=" * 60)
 
 
 def main() -> None:

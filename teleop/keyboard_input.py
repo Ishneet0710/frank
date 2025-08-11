@@ -93,20 +93,6 @@ class KeyboardHandler:
             pass
 
     def start_listener(self):
-        print("\n=== KEYBOARD LISTENER STARTED ===")
-        print("Hold keys for continuous movement:")
-        print("  Arrow Up/Down - Move Along X axis")
-        print("  Arrow Left/Right - Move Along Y axis")
-        print("  PageUp/PageDown - Move Up/Down (Z axis)")
-        print("\nGripper Control:")
-        print("  [ - Open Gripper (incremental)")
-        print("] - Close Gripper (incremental)")
-        print("\nUtility:")
-        print("  Home - Reset to Home")
-        print("  End - Move to Cube")
-        print("  ESC - Exit")
-        print("=====================================")
-
         with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
             listener.join()
 

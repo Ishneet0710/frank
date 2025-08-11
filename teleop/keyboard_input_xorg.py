@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import os
 from typing import Dict, Tuple, List
-
-try:
-    from Xlib import X, XK, display
-except Exception as exc:  # pragma: no cover - optional dependency
-    X = None  # type: ignore
-    XK = None  # type: ignore
-    display = None  # type: ignore
+from Xlib import X, XK, display
+X = None  # type: ignore
+XK = None  # type: ignore
+display = None  # type: ignore
 
 
 class KeyboardHandlerXorg:
@@ -77,20 +74,6 @@ class KeyboardHandlerXorg:
         self._disp.sync()
 
     def start_listener(self) -> None:
-        print("\n=== KEYBOARD LISTENER (Xorg) STARTED ===")
-        print("Hold keys for continuous movement:")
-        print("  Arrow Up/Down - Move Along X axis")
-        print("  Arrow Left/Right - Move Along Y axis")
-        print("  PageUp/PageDown - Move Up/Down (Z axis)")
-        print("\nGripper Control:")
-        print("  [ - Open Gripper (incremental)")
-        print("] - Close Gripper (incremental)")
-        print("\nUtility:")
-        print("  Home - Reset to Home")
-        print("  End - Move to Cube")
-        print("  ESC - Exit")
-        print("=====================================")
-
         try:
             while self.running:
                 evt = self._disp.next_event()
