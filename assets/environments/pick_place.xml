@@ -41,7 +41,7 @@
 
     <body name="object1" pos=".6 -0.02 .34">
       <freejoint/>
-      <geom type="box" size=".02 .03 .04" mass=".5" rgba=".2 .2 .5 1" contype="1" conaffinity="15" group="2" friction="0.90000000000000002 0.90000000000000002 0.001" solref="0.025000000000000001 1" solimp="0.998 0.998 0.001"/>
+      <geom type="box" size=".02 .03 .04" mass=".2" rgba=".2 .2 .5 1" contype="1" conaffinity="15" group="2" friction="1.2 1.0 0.005" solref="0.01 1" solimp="0.995 0.995 0.002"/>
     </body>
   </worldbody>
 
