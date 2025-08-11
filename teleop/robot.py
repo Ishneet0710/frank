@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import time
-import threading
 from typing import List
 
 import numpy as np

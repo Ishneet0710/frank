@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-import os
-import sys
 from typing import Optional, Tuple
 
 import numpy as np
-import mujoco
 
 from teleop.config import JOINT_RATE_LIMIT_RAD_PER_S
 
+import torch  
+from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig  # type: ignore
+from curobo.types.base import TensorDeviceType  # type: ignore
+from curobo.types.math import Pose  # type: ignore
+from curobo.util_file import get_robot_configs_path, join_path  # type: ignore
+
+# Prefer GPU and enable TF32 for speed
+import torch
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 def lowpass_filter_joint_command(prev_q: np.ndarray, q_cmd: np.ndarray, dt: float) -> np.ndarray:
     """Rate limit joint command to reduce jerk."""
@@ -19,64 +27,35 @@ def lowpass_filter_joint_command(prev_q: np.ndarray, q_cmd: np.ndarray, dt: floa
 
 
 class CuroboIK:
-    """Wrapper around cuRobo's IKSolver. Falls back gracefully if unavailable."""
+    """Wrapper around cuRobo's IKSolver."""
 
     def __init__(self) -> None:
         self.available: bool = False
         self._solver = None
         self._tensor_args = None
         self._Pose = None
-        # Try import; if package not installed, add local path
-        try:
-            import curobo  # type: ignore
-        except Exception:
-            # Add local path: <repo_root>/curobo/src
-            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            local_curobo = os.path.join(repo_root, "curobo", "src")
-            if local_curobo not in sys.path:
-                sys.path.insert(0, local_curobo)
-        try:
-            import torch  # noqa: F401
-            from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig  # type: ignore
-            from curobo.types.base import TensorDeviceType  # type: ignore
-            from curobo.types.math import Pose  # type: ignore
-            from curobo.util_file import get_robot_configs_path, join_path  # type: ignore
-        except Exception:
-            return
+        device = torch.device("cuda") 
+        self._tensor_args = TensorDeviceType(device=device)
+        robot_cfg_path = join_path(get_robot_configs_path(), "franka.yml")
+        cfg = IKSolverConfig.load_from_robot_config(
+            robot_cfg=robot_cfg_path,
+            tensor_args=self._tensor_args,
+            ee_link_name=None,
+            use_cuda_graph=True,
+            self_collision_check=False,
+            self_collision_opt=False,
+            regularization=True,
+            num_seeds=24,
+            position_threshold=0.01,
+            rotation_threshold=0.05,
+            grad_iters=60,
+            use_fixed_samples=True,
+        )
+        self._solver = IKSolver(cfg)
+        # Stash types for later
+        self._Pose = Pose
+        self.available = True
 
-        # Build solver config
-        try:
-            # Prefer GPU and enable TF32 for speed
-            import torch
-            torch.backends.cudnn.benchmark = True
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-            self._tensor_args = TensorDeviceType(device=device)
-            robot_cfg_path = join_path(get_robot_configs_path(), "franka.yml")
-            cfg = IKSolverConfig.load_from_robot_config(
-                robot_cfg=robot_cfg_path,
-                tensor_args=self._tensor_args,
-                ee_link_name=None,
-                use_cuda_graph=True,
-                self_collision_check=False,
-                self_collision_opt=False,
-                regularization=True,
-                num_seeds=24,
-                position_threshold=0.01,
-                rotation_threshold=0.05,
-                grad_iters=60,
-                use_fixed_samples=True,
-            )
-            self._solver = IKSolver(cfg)
-            # Stash types for later
-            self._Pose = Pose
-            self.available = True
-        except Exception:
-            self.available = False
-            self._solver = None
-            self._tensor_args = None
 
     def solve(self, target_pos: np.ndarray, target_quat_wxyz: np.ndarray,
               seed_q: Optional[np.ndarray] = None,
