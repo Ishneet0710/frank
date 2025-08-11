@@ -11,8 +11,8 @@ NULLSPACE_GAIN: float = 0.5
 DELTA_STEP: float = 0.005  # meters per control tick
 
 # Gripper parameters (interpreted as opening in meters)
-GRIPPER_OPEN_M: float = 0.04
+GRIPPER_OPEN_M: float = 1
 # Larger gripper increment per tick for faster open/close
-GRIPPER_STEP_M: float = 0.01
+GRIPPER_STEP_M: float = 1
 
 
