@@ -59,7 +59,7 @@ def main() -> None:
             current_time = time.time()
             
             # Process input and control at ~50Hz
-            if current_time - last_update_time > 0.02:
+            if current_time - last_update_time > 0.01:
                 dt = current_time - last_update_time
                 moved = teleop.process_input(dt)
                 if moved:

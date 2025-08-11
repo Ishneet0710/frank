@@ -13,13 +13,14 @@ from teleop.config import (
     GRIPPER_OPEN_M,
     GRIPPER_RATE_MPS,
 )
-from teleop.ik import compute_joint_velocity
+from teleop.ik import CuroboIK
 
 
 class FrankaTeleop:
     def __init__(self) -> None:
         self.model = mujoco.MjModel.from_xml_path("assets/environments/pick_place.xml")
         self.data = mujoco.MjData(self.model)
+        self.curobo_ik = CuroboIK()
 
         self.franka_joints: List[str] = [
             "robot_0/joint1",
@@ -75,6 +76,11 @@ class FrankaTeleop:
         site_id = self.model.site(self.ee_site_name).id
         self.target_pos = self.data.site_xpos[site_id].copy()
         self.current_target = self.target_pos.copy()
+        # Prewarm IK graph to avoid first-press lag
+        try:
+            self.curobo_ik.prewarm(self.current_target, self.target_quat, seed_q=self.data.qpos[self.dof_ids].copy())
+        except Exception:
+            pass
         # Cache body ids for contact checks
         self.left_finger_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "robot_0/left_finger")
         self.right_finger_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "robot_0/right_finger")
@@ -103,20 +109,20 @@ class FrankaTeleop:
             mujoco.mj_step(self.model, self.data)
 
     def solve_ik_and_control(self) -> bool:
-        dq = compute_joint_velocity(
-            self.model, self.data, self.dof_ids, self.home_qpos,
-            self.ee_site_name, self.current_target, self.target_quat
-        )
-
-        new_qpos = self.data.qpos.copy()
-        dq_full = np.zeros(self.model.nv)
-        dq_full[self.dof_ids] = dq
-        mujoco.mj_integratePos(self.model, new_qpos, dq_full, INTEGRATION_DT)
-
-        for act_id, joint_val in zip(self.actuator_ids, new_qpos[self.dof_ids]):
-            self.data.ctrl[act_id] = joint_val
-
-        return True
+        # Use cuRobo IK only
+        if self.curobo_ik.available:
+            q_sol, ok = self.curobo_ik.solve(
+                self.current_target,
+                self.target_quat,
+                seed_q=self.data.qpos[self.dof_ids].copy(),
+                dt=INTEGRATION_DT,
+            )
+            if ok and q_sol is not None:
+                for act_id, joint_val in zip(self.actuator_ids, q_sol):
+                    self.data.ctrl[act_id] = float(joint_val)
+                return True
+            return False
+        return False
 
     def process_input(self, dt: float) -> bool:
         moved = False

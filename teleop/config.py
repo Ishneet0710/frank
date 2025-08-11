@@ -15,4 +15,7 @@ GRIPPER_OPEN_M: float = 0.04
 # Smooth gripper rate (meters/second) when holding open/close
 GRIPPER_RATE_MPS: float = 0.05
 
+# Joint command smoothing for IK solutions
+JOINT_RATE_LIMIT_RAD_PER_S: float = 2.0
+
 
