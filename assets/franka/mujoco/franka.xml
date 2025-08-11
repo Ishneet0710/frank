@@ -18,19 +18,19 @@
       <default class="collision">
         <geom type="mesh" group="3"/>
         <default class="fingertip_pad_collision_1">
-          <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445" friction="1.5 0.01 0.001"/>
+          <geom type="box" size="0.0085 0.004 0.0085" pos="0 0.0055 0.0445" friction="2.0 0.01 0.002"/>
         </default>
         <default class="fingertip_pad_collision_2">
-          <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05" friction="1.5 0.01 0.001"/>
+          <geom type="box" size="0.003 0.002 0.003" pos="0.0055 0.002 0.05" friction="2.0 0.01 0.002"/>
         </default>
         <default class="fingertip_pad_collision_3">
-          <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05" friction="1.5 0.01 0.001"/>
+          <geom type="box" size="0.003 0.002 0.003" pos="-0.0055 0.002 0.05" friction="2.0 0.01 0.002"/>
         </default>
         <default class="fingertip_pad_collision_4">
-          <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395" friction="1.5 0.01 0.001"/>
+          <geom type="box" size="0.003 0.002 0.0035" pos="0.0055 0.002 0.0395" friction="2.0 0.01 0.002"/>
         </default>
         <default class="fingertip_pad_collision_5">
-          <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395" friction="1.5 0.01 0.001"/>
+          <geom type="box" size="0.003 0.002 0.0035" pos="-0.0055 0.002 0.0395" friction="2.0 0.01 0.002"/>
         </default>
       </default>
     </default>
@@ -273,11 +273,9 @@
     <general class="panda" name="robot_0/actuator6" joint="robot_0/joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12"
       ctrlrange="-0.0175 3.7525"/>
     <general class="panda" name="robot_0/actuator7" joint="robot_0/joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12"/>
-    <!-- Remap original ctrlrange (0, 0.04) to (0, 255): 0.04 * 100 / 255 = 0.01568627451 -->
-    <!-- PD servo on tendon: force = kp*(scale*ctrl - pos) - kd*vel -->
-    <!-- scale = 0.04 / 255; choose kp=1500, kd=150 => gain = kp*scale = 0.2352941176 -->
-    <general class="panda" name="robot_0/actuator8" tendon="robot_0/split" forcerange="-800 800" ctrlrange="0 255"
-      gainprm="0.2352941176 0 0" biasprm="0 -150 -1500"/>
+    <!-- Fast position servos on finger joints (direct, meters) -->
+    <position name="robot_0/grip_pos1" joint="robot_0/finger_joint1" kp="3000" ctrlrange="0 0.04" forcerange="-800 800"/>
+    <position name="robot_0/grip_pos2" joint="robot_0/finger_joint2" kp="3000" ctrlrange="0 0.04" forcerange="-800 800"/>
   </actuator>
 
 

@@ -60,7 +60,8 @@ def main() -> None:
             
             # Process input and control at ~50Hz
             if current_time - last_update_time > 0.02:
-                moved = teleop.process_input()
+                dt = current_time - last_update_time
+                moved = teleop.process_input(dt)
                 if moved:
                     teleop.solve_ik_and_control()
                 teleop.apply_gripper_ctrl()

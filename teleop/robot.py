@@ -11,7 +11,7 @@ from teleop.config import (
     INTEGRATION_DT,
     DELTA_STEP,
     GRIPPER_OPEN_M,
-    GRIPPER_STEP_M,
+    GRIPPER_RATE_MPS,
 )
 from teleop.ik import compute_joint_velocity
 
@@ -43,11 +43,17 @@ class FrankaTeleop:
         ]
         self.actuator_ids: List[int] = [self.model.actuator(name).id for name in self.actuator_names]
 
-        # Gripper actuator (tendon)
+        # Gripper actuators (direct position control on each finger)
+        self.gripper_actuator_ids: List[int] = []
         try:
-            self.gripper_actuator_ids: List[int] = [self.model.actuator("robot_0/actuator8").id]
+            self.gripper_actuator_ids.append(self.model.actuator("robot_0/grip_pos1").id)
+            self.gripper_actuator_ids.append(self.model.actuator("robot_0/grip_pos2").id)
         except Exception:
-            self.gripper_actuator_ids = [self.model.nu - 1]
+            # Fallback: try legacy tendon actuator
+            try:
+                self.gripper_actuator_ids = [self.model.actuator("robot_0/actuator8").id]
+            except Exception:
+                self.gripper_actuator_ids = [self.model.nu - 1]
 
         self.ee_site_name: str = "robot_0/ee_site"
 
@@ -69,6 +75,10 @@ class FrankaTeleop:
         site_id = self.model.site(self.ee_site_name).id
         self.target_pos = self.data.site_xpos[site_id].copy()
         self.current_target = self.target_pos.copy()
+        # Cache body ids for contact checks
+        self.left_finger_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "robot_0/left_finger")
+        self.right_finger_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "robot_0/right_finger")
+        self.object_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "object1")
 
     def _initialize_robot(self) -> None:
         self.data.qpos[self.dof_ids] = self.home_qpos
@@ -84,7 +94,7 @@ class FrankaTeleop:
             self.data.ctrl[act_id] = joint_val
 
         for gripper_id in self.gripper_actuator_ids:
-            self.data.ctrl[gripper_id] = np.clip(255.0 * (self.gripper_state / GRIPPER_OPEN_M), 0.0, 255.0)
+            self.data.ctrl[gripper_id] = np.clip(self.gripper_state, 0.0, GRIPPER_OPEN_M)
 
         for _ in range(100):
             if cube_body_id != -1 and cube_joint_start != -1:
@@ -108,7 +118,7 @@ class FrankaTeleop:
 
         return True
 
-    def process_input(self) -> bool:
+    def process_input(self, dt: float) -> bool:
         moved = False
         # Swapped: Up/Down move X, Left/Right move Y
         if self.key_states['up']:
@@ -138,19 +148,45 @@ class FrankaTeleop:
             print(f"Move to cube: {self.current_target}")
             self.key_states['cube'] = False
 
+        # Fast gripper: jump to extremes while key held
+        # Smooth rate-based gripper motion
         if self.key_states['grip_open']:
-            self.gripper_state = self.gripper_state + GRIPPER_STEP_M; moved = True
+            self.gripper_state = min(GRIPPER_OPEN_M, self.gripper_state + GRIPPER_RATE_MPS * dt)
+            moved = True
             print(f"Gripper Opening: {self.gripper_state:.3f}m")
 
         if self.key_states['grip_close']:
-            self.gripper_state = self.gripper_state - GRIPPER_STEP_M; moved = True
-            print(f"Gripper Closing: {self.gripper_state:.3f}m")
+            # Stop closing once both fingers contact the object to avoid crossing
+            if not self._both_fingers_contact_object():
+                self.gripper_state = max(0.0, self.gripper_state - GRIPPER_RATE_MPS * dt)
+                moved = True
+                print(f"Gripper Closing: {self.gripper_state:.3f}m")
 
         return moved
 
     def apply_gripper_ctrl(self) -> None:
-        ctrl_val = np.clip(255.0 * (self.gripper_state / GRIPPER_OPEN_M), 0.0, 255.0)
+        # Directly command finger positions (fast)
+        ctrl_val = np.clip(self.gripper_state, 0.0, GRIPPER_OPEN_M)
         for gripper_id in self.gripper_actuator_ids:
             self.data.ctrl[gripper_id] = ctrl_val
+
+    def _both_fingers_contact_object(self) -> bool:
+        if self.object_body_id < 0:
+            return False
+        left_contact = False
+        right_contact = False
+        for i in range(self.data.ncon):
+            con = self.data.contact[i]
+            g1 = con.geom1
+            g2 = con.geom2
+            b1 = self.model.geom_bodyid[g1]
+            b2 = self.model.geom_bodyid[g2]
+            if (b1 == self.left_finger_body_id and b2 == self.object_body_id) or (b2 == self.left_finger_body_id and b1 == self.object_body_id):
+                left_contact = True
+            if (b1 == self.right_finger_body_id and b2 == self.object_body_id) or (b2 == self.right_finger_body_id and b1 == self.object_body_id):
+                right_contact = True
+            if left_contact and right_contact:
+                break
+        return left_contact and right_contact
 
 
